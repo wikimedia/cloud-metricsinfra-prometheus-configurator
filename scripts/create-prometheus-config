@@ -1,0 +1,53 @@
+#!/usr/bin/env python3
+"""
+Create full Prometheus config files based on sources that might be editable by end users.
+"""
+import argparse
+import pathlib
+import subprocess
+
+import yaml
+
+from prometheus_configurator.prometheus import ConfigFileCreator
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('config', help="Prometheus configurator definition file.")
+    parser.add_argument('target_directory', help="Directory to write Prometheus configuration to.")
+    args = parser.parse_args()
+
+    base_directory = pathlib.Path(args.target_directory)
+
+    with open(args.config, 'r') as config_file:
+        yaml_data = yaml.safe_load(config_file.read())
+
+    creator = ConfigFileCreator(yaml_data, base_directory)
+    # TODO: shard projects across multiple prometheus instances?
+    projects = creator.get_defined_projects()
+    prometheus_config = creator.create_prometheus_config(projects)
+
+    with open(base_directory.joinpath("prometheus.yml"), mode='w') as file:
+        file.write(yaml.safe_dump(prometheus_config))
+
+    base_rule_directory = base_directory.joinpath("rules")
+    if not base_rule_directory.exists():
+        base_rule_directory.mkdir()
+
+    rule_files = creator.create_rule_files(projects)
+    for file_name, file_content in rule_files.items():
+        with open(base_rule_directory.joinpath(file_name), mode='w') as file:
+            file.write(yaml.safe_dump(file_content))
+
+    for match in base_rule_directory.glob("*.yml"):
+        if match.name not in rule_files.keys():
+            print(f"would remove {match}")
+
+    for unit in yaml_data.get('units_to_reload', []):
+        # This will succeed even if Prometheus fails to reload its config
+        # In that case, just let it - it will alert shortly
+        subprocess.check_call(['/usr/bin/sudo', '/usr/bin/systemctl', 'reload', unit])
+
+
+if __name__ == '__main__':
+    main()
