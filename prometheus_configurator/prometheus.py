@@ -100,9 +100,12 @@ class ConfigFileCreator:
         result.append(self._create_internal_alertmanager_job())
         return result
 
-    def _create_rule_file(self, rule_groups: list) -> list:
+    def _create_rule_group(self, group: dict, name_prefix: str) -> dict:
         # TODO: perform validation, etc
-        return rule_groups
+        return {'name': f"{name_prefix}{group['name']}", 'rules': group.get('rules', [])}
+
+    def _create_rule_file(self, rule_groups: list, name_prefix: str = '') -> dict:
+        return {'groups': [self._create_rule_group(group, name_prefix) for group in rule_groups]}
 
     def create_prometheus_config(self, projects: list) -> dict:
         return {
@@ -142,7 +145,7 @@ class ConfigFileCreator:
             if len(project_alert_groups) == 0:
                 continue
             rule_files[f'alerts_project_{project}.yml'] = self._create_rule_file(
-                project_alert_groups
+                project_alert_groups, f'project_{project}_'
             )
 
         return rule_files
