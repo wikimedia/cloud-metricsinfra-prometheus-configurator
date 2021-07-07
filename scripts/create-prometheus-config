@@ -40,7 +40,7 @@ def main():
             file.write(yaml.safe_dump(file_content))
 
     for match in base_rule_directory.glob("*.yml"):
-        if match.name not in rule_files.keys():
+        if match.name not in rule_files.keys() and match.name not in yaml_data.get('external_rules_files', []):
             print(f"would remove {match}")
 
     for unit in yaml_data.get('units_to_reload', []):
