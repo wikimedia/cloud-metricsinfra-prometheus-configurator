@@ -1,12 +1,9 @@
-import pathlib
-
 from prometheus_configurator import openstack
 
 
 class ConfigFileCreator:
-    def __init__(self, params: dict, target_directory: pathlib.Path):
+    def __init__(self, params: dict):
         self.params = params
-        self.target_directory = target_directory
         self.projects = self.params['projects'].keys()
 
         self.openstack_credentials = openstack.read_openstack_configuration(
@@ -107,7 +104,7 @@ class ConfigFileCreator:
     def _create_rule_file(self, rule_groups: list, name_prefix: str = '') -> dict:
         return {'groups': [self._create_rule_group(group, name_prefix) for group in rule_groups]}
 
-    def create_prometheus_config(self, projects: list) -> dict:
+    def create_prometheus_config(self, projects: list, rule_files_path: list) -> dict:
         return {
             'global': {
                 'scrape_interval': '60s',
@@ -130,7 +127,7 @@ class ConfigFileCreator:
                 ],
             },
             'rule_files': [
-                f"{str(self.target_directory.joinpath('rules'))}/*.yml",
+                rule_files_path,
             ],
             'scrape_configs': self._create_scrape_configs(projects),
         }
