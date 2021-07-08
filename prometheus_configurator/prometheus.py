@@ -104,7 +104,7 @@ class ConfigFileCreator:
     def _create_rule_file(self, rule_groups: list, name_prefix: str = '') -> dict:
         return {'groups': [self._create_rule_group(group, name_prefix) for group in rule_groups]}
 
-    def create_prometheus_config(self, projects: list, rule_files_path: list) -> dict:
+    def create_prometheus_config(self, projects: list, rule_files_paths: list) -> dict:
         return {
             'global': {
                 'scrape_interval': '60s',
@@ -126,9 +126,7 @@ class ConfigFileCreator:
                     },
                 ],
             },
-            'rule_files': [
-                rule_files_path,
-            ],
+            'rule_files': rule_files_paths,
             'scrape_configs': self._create_scrape_configs(projects),
         }
 
