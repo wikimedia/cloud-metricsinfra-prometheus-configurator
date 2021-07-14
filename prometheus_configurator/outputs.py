@@ -69,7 +69,9 @@ class AlertmanagerOutput(Output):
         am_config = merge(
             am_config,
             {
-                'routes': routes,
+                'route': {
+                    'routes': routes,
+                },
                 'receivers': receivers,
             },
         )
