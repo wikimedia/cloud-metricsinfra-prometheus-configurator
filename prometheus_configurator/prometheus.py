@@ -90,7 +90,7 @@ class ConfigFileCreator:
         for project in projects:
             for job in self.params.get('global_jobs', []):
                 result.append(self._create_job(project, job))
-            for job in self.params['projects'][project].get('jobs', []):
+            for job in self.get_project_config(project).get('jobs', []):
                 result.append(self._create_job(project, job))
 
         result.append(self._create_internal_prometheus_job())
@@ -130,13 +130,16 @@ class ConfigFileCreator:
             'scrape_configs': self._create_scrape_configs(projects),
         }
 
+    def get_project_config(self, project: str) -> dict:
+        return self.params['projects'].get(project, {})
+
     def create_rule_files(self, projects: list) -> dict:
         rule_files = {
             'alerts_global.yml': self._create_rule_file(self.params.get('global_alert_groups', []))
         }
 
         for project in projects:
-            project_alert_groups = self.params['projects'][project].get('alert_groups', [])
+            project_alert_groups = self.get_project_config(project).get('alert_groups', [])
             if len(project_alert_groups) == 0:
                 continue
             rule_files[f'alerts_project_{project}.yml'] = self._create_rule_file(
@@ -144,6 +147,24 @@ class ConfigFileCreator:
             )
 
         return rule_files
+
+    def get_alertmanager_routes_receivers(self, projects: list):
+        routes = []
+        receivers = []
+
+        # TODO: support for more advanced rules
+        for project in projects:
+            email_to = self.get_project_config(project).get('notify_email', [])
+            if len(email_to) != 0:
+                receivers.append(
+                    {
+                        'name': f'{project}_email',
+                        'email_configs': [{'to': email} for email in email_to],
+                    }
+                )
+                routes.append({'receiver': f'{project}_email', 'match': {'project': project}})
+
+        return routes, receivers
 
     def get_defined_projects(self) -> list:
         return self.projects

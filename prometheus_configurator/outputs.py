@@ -4,6 +4,7 @@ import subprocess
 import yaml
 
 from prometheus_configurator.prometheus import ConfigFileCreator
+from prometheus_configurator.utils import merge
 
 
 class Output:
@@ -58,8 +59,32 @@ class PrometheusOutput(Output):
         self._reload_units()
 
 
+class AlertmanagerOutput(Output):
+    def write(self, creator: ConfigFileCreator, projects: list):
+        am_config = self.main_config.get('alertmanager_config', {})
+        am_config = merge(am_config, self.config.get('alertmanager_config', {}))
+
+        routes, receivers = creator.get_alertmanager_routes_receivers(projects)
+
+        am_config = merge(
+            am_config,
+            {
+                'routes': routes,
+                'receivers': receivers,
+            },
+        )
+
+        base_directory = pathlib.Path(self.config.get('base_directory'))
+        am_config_path = base_directory.joinpath('alertmanager.yml')
+        with am_config_path.open(mode='w') as file:
+            print(f'writing alert manager config file {am_config_path}')
+            file.write(yaml.safe_dump(am_config))
+
+
 def create_output(output_config: dict, main_config: dict):
     kind = output_config.get('kind')
     if kind == 'prometheus':
         return PrometheusOutput(output_config, main_config)
+    if kind == 'alertmanager':
+        return AlertmanagerOutput(output_config, main_config)
     raise NotImplementedError(f'Output {kind} is not supported.')
