@@ -64,40 +64,15 @@ class ConfigFileCreator:
 
         return job
 
-    def _create_internal_prometheus_job(self) -> dict:
-        # TODO: make configurable: metrics_path, targets (support clustering)
-        # (or just configure to scrape itself)
-        return {
-            'job_name': 'prometheus',
-            'metrics_path': '/cloud/metrics',
-            'static_configs': [
-                {
-                    'targets': ['localhost:9900'],
-                }
-            ],
-        }
-
-    def _create_internal_alertmanager_job(self) -> dict:
-        return {
-            'job_name': 'alertmanager',
-            'metrics_path': '/metrics',
-            'static_configs': [
-                {
-                    'targets': self.params['alertmanager_hosts'],
-                }
-            ],
-        }
-
     def _create_scrape_configs(self, projects: list) -> list:
         result = []
+
         for project in projects:
             for job in self.params.get('global_jobs', []):
                 result.append(self._create_job(project, job))
             for job in self.get_project_config(project).get('jobs', []):
                 result.append(self._create_job(project, job))
 
-        result.append(self._create_internal_prometheus_job())
-        result.append(self._create_internal_alertmanager_job())
         return result
 
     def _create_rule_group(self, group: dict, name_prefix: str) -> dict:
