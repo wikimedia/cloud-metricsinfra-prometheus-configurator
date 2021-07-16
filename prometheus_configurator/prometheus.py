@@ -16,6 +16,9 @@ class ConfigFileCreator:
             'relabel_configs': [],
         }
 
+        if 'metrics_path' in rule:
+            job['metrics_path'] = rule['metrics_path']
+
         if 'openstack_discovery' in rule:
             openstack_config = dict(self.openstack_credentials)
             openstack_config['project_name'] = project
