@@ -1,7 +1,12 @@
+import logging
+
 import yaml
+
+logger = logging.getLogger(__name__)
 
 
 def read_openstack_configuration(file: str):
+    logger.debug(f'loading openstack config from file {file}')
     with open(file, 'r') as openstack_file:
         data = yaml.safe_load(openstack_file)
         return {

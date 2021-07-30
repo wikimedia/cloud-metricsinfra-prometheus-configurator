@@ -1,0 +1,22 @@
+from pkg_resources import DistributionNotFound, get_distribution
+
+from prometheus_configurator.manager import PrometheusManagerClient
+from prometheus_configurator.outputs import Output
+from prometheus_configurator.outputs.alertmanager import AlertmanagerOutput
+from prometheus_configurator.outputs.prometheus import PrometheusOutput
+
+try:
+    __version__: str = get_distribution('taavilib').version
+except DistributionNotFound:
+    __version__ = '0.0.0'
+
+
+def create_output(
+    output_config: dict, main_config: dict, manager_client: PrometheusManagerClient
+) -> Output:
+    kind = output_config.get('kind')
+    if kind == 'prometheus':
+        return PrometheusOutput(output_config, main_config, manager_client)
+    if kind == 'alertmanager':
+        return AlertmanagerOutput(output_config, main_config, manager_client)
+    raise NotImplementedError(f'Output {kind} is not supported.')

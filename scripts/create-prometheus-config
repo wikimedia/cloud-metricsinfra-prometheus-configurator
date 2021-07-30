@@ -4,17 +4,22 @@ Create full Prometheus config files based on sources that might be editable by e
 """
 import argparse
 import glob
+import logging
 import pathlib
 
+from prometheus_configurator import create_output
 from prometheus_configurator.config import load_config_files
-from prometheus_configurator.outputs import create_output
-from prometheus_configurator.prometheus import ConfigFileCreator
+from prometheus_configurator.logging import setup_logging
+from prometheus_configurator.manager import PrometheusManagerClient
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', help="Config file(s) used to instruct prometheus-configurator what to do.", action='append')
+    parser.add_argument('--verbose', help="Enable verbose debug logging", action='store_true')
     args = parser.parse_args()
+
+    setup_logging(logging.DEBUG if args.verbose else logging.INFO)
 
     config_files = []
     for config_glob in args.config:
@@ -23,14 +28,13 @@ def main():
 
     own_config = load_config_files(config_files)
 
-    creator = ConfigFileCreator(own_config)
+    manager_client = PrometheusManagerClient(own_config.get("manager").get("url"))
 
-    # TODO: shard projects across multiple prometheus instances?
-    projects = creator.get_defined_projects()
+    projects = manager_client.get_projects()
 
     for output_config in own_config.get("outputs"):
-        output = create_output(output_config, own_config)
-        output.write(creator, projects)
+        output = create_output(output_config, own_config, manager_client)
+        output.write(projects)
 
 
 if __name__ == '__main__':
