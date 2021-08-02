@@ -12,7 +12,7 @@ class PrometheusManagerClient:
         self.base_url = base_url
         self.session = requests.Session()
         self.session.headers['User-Agent'] = (
-            f'prometheus_configurator/{prometheus_configurator.__version__}'
+            f'prometheus_configurator/{prometheus_configurator.__version__} '
             + f'python-requests/{requests.__version__}'
         )
 

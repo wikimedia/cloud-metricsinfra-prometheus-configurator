@@ -49,6 +49,14 @@ class AlertmanagerOutput(Output):
 
         base_directory = pathlib.Path(self.config.get('base_directory'))
         am_config_path = base_directory.joinpath('alertmanager.yml')
-        with am_config_path.open(mode='w') as file:
-            logger.info(f'writing alert manager config file {am_config_path}')
-            file.write(yaml.safe_dump(am_config))
+
+        old_config = am_config_path.read_text() if am_config_path.exists() else ''
+        new_config = yaml.safe_dump(am_config)
+
+        if old_config != new_config:
+            with am_config_path.open(mode='w') as file:
+                logger.info(f'writing alert manager config file {am_config_path}')
+                file.write(new_config)
+                self._reload_units()
+        else:
+            logger.info('alert manager config is up to date')

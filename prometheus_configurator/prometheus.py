@@ -80,12 +80,36 @@ class ConfigFileCreator:
 
         return result
 
-    def _create_rule_group(self, group: dict, name_prefix: str) -> dict:
-        # TODO: perform validation, etc
-        return {'name': f"{name_prefix}{group['name']}", 'rules': group.get('rules', [])}
+    def _create_rule(self, rule: dict, project_name: str) -> dict:
+        return {
+            'alert': rule.get('name'),
+            'expr': rule.get('query'),
+            'for': rule.get('duration'),
+            'annotations': rule.get('annotations'),
+            'labels': {
+                'severity': rule.get('severity'),
+                'project': project_name,
+            },
+        }
 
-    def _create_rule_file(self, rule_groups: list, name_prefix: str = '') -> dict:
-        return {'groups': [self._create_rule_group(group, name_prefix) for group in rule_groups]}
+    def _create_project_rules(self, rules: list, project_name: str) -> dict:
+        return {
+            'groups': [
+                {
+                    'name': project_name,
+                    'rules': [self._create_rule(rule, project_name) for rule in rules],
+                }
+            ]
+        }
+
+    # TODO: remove
+    def _create_legacy_rule_file(self, rule_groups: list, name_prefix: str = ''):
+        return {
+            'groups': [
+                {'name': f"{name_prefix}{group['name']}", 'rules': group.get('rules', [])}
+                for group in rule_groups
+            ]
+        }
 
     def create_prometheus_config(
         self, projects: list, manager_client: PrometheusManagerClient, rule_files_paths: list
@@ -118,20 +142,26 @@ class ConfigFileCreator:
     def get_project_config(self, project: str) -> dict:
         return self.params.get('projects', {}).get(project, {})
 
-    def create_rule_files(self, projects: list) -> dict:
+    def create_rule_files(self, projects: list, manager_client: PrometheusManagerClient) -> dict:
         rule_files = {
             # TODO: load from prometheus-manager?
             # also, use thanos rule for some but not all global rules
-            'alerts_global.yml': self._create_rule_file(self.params.get('global_alert_groups', []))
+            'alerts_global.yml': self._create_legacy_rule_file(
+                self.params.get('global_alert_groups', [])
+            )
         }
 
         for project in projects:
-            # TODO: load from prometheus-manager
-            project_alert_groups = self.get_project_config(project).get('alert_groups', [])
-            if len(project_alert_groups) == 0:
+            project_name = project.get('name')
+            project_alert_rules = manager_client.get_project_details(project.get('id')).get(
+                'alert_rules'
+            )
+
+            if len(project_alert_rules) == 0:
                 continue
-            rule_files[f'alerts_project_{project}.yml'] = self._create_rule_file(
-                project_alert_groups, f'project_{project}_'
+
+            rule_files[f'alerts_project_{project_name}.yml'] = self._create_project_rules(
+                project_alert_rules, project_name
             )
 
         return rule_files
