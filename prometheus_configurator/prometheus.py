@@ -1,4 +1,5 @@
 from prometheus_configurator import PrometheusManagerClient, openstack
+from prometheus_configurator.utils import camelcase_projectname
 
 
 class ConfigFileCreator:
@@ -80,34 +81,42 @@ class ConfigFileCreator:
 
         return result
 
-    def _create_rule(self, rule: dict, project_name: str) -> dict:
+    def _create_rule(self, rule: dict, name_prefix: str, extra_labels: dict) -> dict:
         return {
-            'alert': rule.get('name'),
-            'expr': rule.get('query'),
+            'alert': f"{name_prefix}{rule.get('name')}",
+            'expr': rule.get('expr'),
             'for': rule.get('duration'),
             'annotations': rule.get('annotations'),
             'labels': {
+                **extra_labels,
                 'severity': rule.get('severity'),
-                'project': project_name,
             },
         }
 
     def _create_project_rules(self, rules: list, project_name: str) -> dict:
+        labels = {
+            'project': project_name,
+        }
+
         return {
             'groups': [
                 {
                     'name': project_name,
-                    'rules': [self._create_rule(rule, project_name) for rule in rules],
+                    'rules': [
+                        self._create_rule(rule, camelcase_projectname(project_name), labels)
+                        for rule in rules
+                    ],
                 }
             ]
         }
 
-    # TODO: remove
-    def _create_legacy_rule_file(self, rule_groups: list, name_prefix: str = ''):
+    def _create_global_rules(self, rules: list) -> dict:
         return {
             'groups': [
-                {'name': f"{name_prefix}{group['name']}", 'rules': group.get('rules', [])}
-                for group in rule_groups
+                {
+                    'name': 'global',
+                    'rules': [self._create_rule(rule, '', {}) for rule in rules],
+                }
             ]
         }
 
@@ -144,10 +153,13 @@ class ConfigFileCreator:
 
     def create_rule_files(self, projects: list, manager_client: PrometheusManagerClient) -> dict:
         rule_files = {
-            # TODO: load from prometheus-manager?
-            # also, use thanos rule for some but not all global rules
-            'alerts_global.yml': self._create_legacy_rule_file(
-                self.params.get('global_alert_groups', [])
+            'alerts_global.yml': self._create_global_rules(
+                [
+                    rule
+                    for rule in manager_client.get('/v1/global-alerts')
+                    # do not deploy ones that need full global view from Thanos
+                    if rule.get('mode') == 'PER_PROJECT'
+                ]
             )
         }
 

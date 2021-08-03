@@ -9,3 +9,7 @@ def merge(new_vals, existing_obj):
     elif isinstance(new_vals, list) and isinstance(existing_obj, list):
         return [*new_vals, *existing_obj]
     return new_vals
+
+
+def camelcase_projectname(original: str) -> str:
+    return ''.join([part.title() for part in original.split('-')])
