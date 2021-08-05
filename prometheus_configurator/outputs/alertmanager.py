@@ -1,5 +1,6 @@
 import logging
 import pathlib
+from typing import List
 
 import yaml
 
@@ -10,40 +11,58 @@ logger = logging.getLogger(__name__)
 
 
 class AlertmanagerOutput(Output):
-    def _get_alertmanager_routes_receivers(self, projects: list):
+    def _format_webhook_configs(self, members: List[dict]) -> List[dict]:
+        irc_base = self.main_config.get('alert_routing', {}).get('irc_base', 'http://invalid/')
+        return [
+            # TODO: add support for arbitrary user-supplied webhook
+            {'url': f"{irc_base}{member.get('value').lstrip('#')}"}
+            for member in members
+            if member.get('type') == 'IRC'
+        ]
+
+    def _format_contact_group(self, contact_group: dict) -> dict:
+        project_name = contact_group.get('project').get('name')
+        name = contact_group.get('name')
+        members = contact_group.get('members')
+
+        return {
+            'name': f'{project_name}_{name}',
+            'email_configs': [
+                {'to': member.get('value')} for member in members if member.get('type') == 'EMAIL'
+            ],
+            'webhook_configs': self._format_webhook_configs(members),
+        }
+
+    def _get_receivers(self) -> List[dict]:
+        return [
+            self._format_contact_group(contact_group)
+            for contact_group in self.manager.get_contact_groups()
+        ]
+
+    def _get_project_routes(self, projects: list):
         routes = []
-        receivers = []
 
         # TODO: support for more advanced rules, load them from manager
         for project in projects:
             project_name = project.get('name')
-            email_to = self._get_project_config(project_name).get('notify_email', [])
-            if len(email_to) != 0:
-                receivers.append(
-                    {
-                        'name': f'{project_name}_email',
-                        'email_configs': [{'to': email} for email in email_to],
-                    }
-                )
-                routes.append(
-                    {'receiver': f'{project_name}_email', 'match': {'project': project_name}}
-                )
+            contact_group = self._get_project_config(project_name).get('contact_group', None)
+            if contact_group is not None:
+                # TODO: add project specific prefix? or no?
+                routes.append({'receiver': contact_group, 'match': {'project': project_name}})
 
-        return routes, receivers
+        return routes
 
     def write(self, projects: list):
         am_config = self.main_config.get('alertmanager_config', {})
         am_config = merge(am_config, self.config.get('alertmanager_config', {}))
 
-        routes, receivers = self._get_alertmanager_routes_receivers(projects)
-
         am_config = merge(
             am_config,
             {
                 'route': {
-                    'routes': routes,
+                    'routes': self._get_project_routes(projects),
                 },
-                'receivers': receivers,
+                'receivers': self._get_receivers(),
             },
         )
 

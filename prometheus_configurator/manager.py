@@ -27,3 +27,6 @@ class PrometheusManagerClient:
 
     def get_project_details(self, project_id: int):
         return self.get(f'/v1/projects/{project_id}')
+
+    def get_contact_groups(self):
+        return self.get('/v1/contact-groups')
