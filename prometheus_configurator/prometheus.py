@@ -25,7 +25,7 @@ class ConfigFileCreator:
         if 'metrics_path' in rule:
             job['metrics_path'] = rule['metrics_path']
 
-        if 'openstack_discovery' in rule:
+        if 'openstack_discovery' in rule and rule['openstack_discovery'] is not None:
             openstack_config = dict(self.openstack_credentials)
             openstack_config['project_name'] = project_name
             openstack_config['port'] = rule['openstack_discovery']['port']
