@@ -45,10 +45,20 @@ class AlertmanagerOutput(Output):
         # TODO: support for more advanced rules, load them from manager
         for project in projects:
             project_name = project.get('name')
-            contact_group = self._get_project_config(project_name).get('contact_group', None)
+            project_details = self.manager.get_project_details(project.get('id'))
+
+            contact_group = project_details.get('default_contact_group', None)
+
             if contact_group is not None:
-                # TODO: add project specific prefix? or no?
-                routes.append({'receiver': contact_group, 'match': {'project': project_name}})
+                group_project_name = contact_group.get('project').get('name')
+                group_name = contact_group.get('name')
+
+                routes.append(
+                    {
+                        'receiver': f'{group_project_name}_{group_name}',
+                        'match': {'project': project_name},
+                    }
+                )
 
         return routes
 
