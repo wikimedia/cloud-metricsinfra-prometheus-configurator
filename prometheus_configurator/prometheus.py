@@ -16,6 +16,7 @@ class ConfigFileCreator:
             'job_name': f"{project_name}_{rule['name']}",
             'relabel_configs': [],
             'metrics_path': rule.get('path', '/metrics'),
+            'static_configs': [],
         }
 
         # TODO: this is currently used for global rules only,
@@ -65,6 +66,16 @@ class ConfigFileCreator:
                     'regex': 'ACTIVE',
                 }
             )
+
+        for static_target in rule.get('static_discovery', []):
+            obj = {
+                'targets': [f"{static_target['host']}:{static_target['port']}"],
+                'labels': {
+                    'project': project_name,
+                },
+            }
+
+            job['static_configs'].append(obj)
 
         return job
 
