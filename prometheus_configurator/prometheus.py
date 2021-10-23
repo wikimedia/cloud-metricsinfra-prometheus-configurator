@@ -16,6 +16,7 @@ class ConfigFileCreator:
             'job_name': f"{project_name}_{rule['name']}",
             'relabel_configs': [],
             'metrics_path': rule.get('path', '/metrics'),
+            'scheme': rule.get('scheme', 'http'),
             'static_configs': [],
         }
 

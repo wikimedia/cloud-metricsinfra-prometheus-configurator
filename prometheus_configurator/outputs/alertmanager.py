@@ -4,7 +4,7 @@ from typing import List
 
 import yaml
 
-from prometheus_configurator.outputs.prometheus import Output
+from prometheus_configurator.outputs import Output
 from prometheus_configurator.utils import merge
 
 logger = logging.getLogger(__name__)
