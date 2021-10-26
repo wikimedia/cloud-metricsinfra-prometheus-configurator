@@ -28,7 +28,12 @@ class AlertmanagerOutput(Output):
         return {
             'name': f'{project_name}_{name}',
             'email_configs': [
-                {'to': member.get('value')} for member in members if member.get('type') == 'EMAIL'
+                {
+                    'to': member.get('value'),
+                    'send_resolved': True,
+                }
+                for member in members
+                if member.get('type') == 'EMAIL'
             ],
             'webhook_configs': self._format_webhook_configs(members),
         }
