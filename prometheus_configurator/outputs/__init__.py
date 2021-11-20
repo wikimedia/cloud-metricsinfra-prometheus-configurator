@@ -19,8 +19,11 @@ class Output:
         return self.main_config.get('projects', {}).get(project, {})
 
     def _reload_units(self):
+        # This will succeed even if Prometheus fails to reload its config
+        # In that case, just let it - it will alert shortly
         for unit in self.config.get('units_to_reload', []):
-            # This will succeed even if Prometheus fails to reload its config
-            # In that case, just let it - it will alert shortly
             logger.info(f'reloading systemd unit {unit}')
             subprocess.check_call(['/usr/bin/sudo', '/usr/bin/systemctl', 'reload', unit])
+        for unit in self.config.get('units_to_restart', []):
+            logger.info(f'restarting systemd unit {unit}')
+            subprocess.check_call(['/usr/bin/sudo', '/usr/bin/systemctl', 'restart', unit])
