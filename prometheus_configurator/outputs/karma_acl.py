@@ -50,7 +50,7 @@ class KarmaAclOutput(Output):
         file_path = pathlib.Path(self.config.get('acl_file_path'))
 
         old_data = file_path.read_text() if file_path.exists() else ''
-        new_data = yaml.safe_dump(rules)
+        new_data = yaml.safe_dump({'rules': rules})
 
         if old_data != new_data:
             with file_path.open(mode='w') as file:
