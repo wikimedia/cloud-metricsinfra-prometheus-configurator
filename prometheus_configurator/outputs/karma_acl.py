@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class KarmaAclOutput(Output):
-    def project_for_group(self, project: str) -> str:
+    def default_group_for_project(self, project: str) -> str:
         return self.main_config.get('project_group_format', '{project}').format(project=project)
 
     def write(self, projects: list):
@@ -20,19 +20,27 @@ class KarmaAclOutput(Output):
                 'action': 'allow',
                 'reason': 'Members of a sudo project can do anything',
                 'scope': {
-                    'groups': [self.project_for_group(project) for project in sudo_projects],
+                    'groups': [
+                        self.default_group_for_project(project) for project in sudo_projects
+                    ],
                 },
             },
         ]
 
         for project in projects:
             project_name = project.get('name')
+
+            project_details = self.manager.get_project_details(project.get('id'))
+            group = project_details.get('acl_group', None)
+            if group is None:
+                group = self.default_group_for_project(project_name)
+
             rules.append(
                 {
                     'action': 'allow',
                     'reason': f'Members of project {project_name} can do anything in that project',
                     'scope': {
-                        'groups': [self.project_for_group(project_name)],
+                        'groups': [group],
                     },
                     'matchers': {
                         'required': [
