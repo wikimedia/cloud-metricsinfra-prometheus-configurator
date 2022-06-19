@@ -138,6 +138,7 @@ class ConfigFileCreator:
         return {
             'global': {
                 'scrape_interval': '60s',
+                'external_labels': self.params.get('external_labels', []),
             },
             'alerting': {
                 'alert_relabel_configs': [
