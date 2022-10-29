@@ -5,6 +5,7 @@ from prometheus_configurator.outputs import Output
 from prometheus_configurator.outputs.alertmanager import AlertmanagerOutput
 from prometheus_configurator.outputs.karma_acl import KarmaAclOutput
 from prometheus_configurator.outputs.prometheus import PrometheusOutput
+from prometheus_configurator.outputs.thanos_rule import ThanosRuleOutput
 
 try:
     __version__: str = get_distribution('prometheus_configurator').version
@@ -22,4 +23,6 @@ def create_output(
         return AlertmanagerOutput(output_config, main_config, manager_client)
     if kind == 'karma_acl':
         return KarmaAclOutput(output_config, main_config, manager_client)
+    if kind == 'thanos_rule':
+        return ThanosRuleOutput(output_config, main_config, manager_client)
     raise NotImplementedError(f'Output {kind} is not supported.')

@@ -190,3 +190,12 @@ class ConfigFileCreator:
             )
 
         return rule_files
+
+    def create_thanos_rule_file(self, manager_client: PrometheusManagerClient) -> dict:
+        return self._create_global_rules(
+            [
+                rule
+                for rule in manager_client.get('/v1/global-alerts')
+                if rule.get('mode') == 'GLOBAL'
+            ]
+        )
