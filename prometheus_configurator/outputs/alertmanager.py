@@ -91,6 +91,6 @@ class AlertmanagerOutput(Output):
             with am_config_path.open(mode='w') as file:
                 logger.info(f'writing alert manager config file {am_config_path}')
                 file.write(new_config)
-                self._reload_units()
+            self._reload_units()
         else:
             logger.info('alert manager config is up to date')

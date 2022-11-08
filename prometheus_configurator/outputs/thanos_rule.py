@@ -24,6 +24,6 @@ class ThanosRuleOutput(Output):
             with file_path.open(mode='w') as file:
                 logger.info(f'writing alert file {file_path}')
                 file.write(new_data)
-                self._reload_units()
+            self._reload_units()
         else:
             logger.info('thanos rule alert file is up to date')

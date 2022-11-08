@@ -64,6 +64,6 @@ class KarmaAclOutput(Output):
             with file_path.open(mode='w') as file:
                 logger.info(f'writing karma acl file {file_path}')
                 file.write(new_data)
-                self._reload_units()
+            self._reload_units()
         else:
             logger.info('karma acl file is up to date')
