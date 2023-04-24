@@ -11,7 +11,7 @@ def read_openstack_configuration(file: str):
         data = yaml.safe_load(openstack_file)
         return {
             'all_tenants': False,
-            'domain_name': data['OS_PROJECT_DOMAIN_NAME'],
+            'domain_id': data['OS_PROJECT_DOMAIN_ID'],
             'identity_endpoint': data['OS_AUTH_URL'],
             'password': data['OS_PASSWORD'],
             'refresh_interval': '5m',
