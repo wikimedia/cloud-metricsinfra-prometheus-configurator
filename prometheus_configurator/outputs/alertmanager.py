@@ -12,30 +12,32 @@ logger = logging.getLogger(__name__)
 
 class AlertmanagerOutput(Output):
     def _format_webhook_configs(self, members: List[dict]) -> List[dict]:
-        irc_base = self.main_config.get('alert_routing', {}).get('irc_base', 'http://invalid/')
+        irc_base = self.main_config.get("alert_routing", {}).get(
+            "irc_base", "http://invalid/"
+        )
         return [
             # TODO: add support for arbitrary user-supplied webhook
-            {'url': f"{irc_base}{member.get('value').lstrip('#')}"}
+            {"url": f"{irc_base}{member.get('value').lstrip('#')}"}
             for member in members
-            if member.get('type') == 'IRC'
+            if member.get("type") == "IRC"
         ]
 
     def _format_contact_group(self, contact_group: dict) -> dict:
-        project_name = contact_group.get('project').get('name')
-        name = contact_group.get('name')
-        members = contact_group.get('members')
+        project_name = contact_group.get("project").get("name")
+        name = contact_group.get("name")
+        members = contact_group.get("members")
 
         return {
-            'name': f'{project_name}_{name}',
-            'email_configs': [
+            "name": f"{project_name}_{name}",
+            "email_configs": [
                 {
-                    'to': member.get('value'),
-                    'send_resolved': True,
+                    "to": member.get("value"),
+                    "send_resolved": True,
                 }
                 for member in members
-                if member.get('type') == 'EMAIL'
+                if member.get("type") == "EMAIL"
             ],
-            'webhook_configs': self._format_webhook_configs(members),
+            "webhook_configs": self._format_webhook_configs(members),
         }
 
     def _get_receivers(self) -> List[dict]:
@@ -49,48 +51,48 @@ class AlertmanagerOutput(Output):
 
         # TODO: support for more advanced rules, load them from manager
         for project in projects:
-            project_name = project.get('name')
-            project_details = self.manager.get_project_details(project.get('id'))
+            project_name = project.get("name")
+            project_details = self.manager.get_project_details(project.get("id"))
 
-            contact_group = project_details.get('default_contact_group', None)
+            contact_group = project_details.get("default_contact_group", None)
 
             if contact_group is not None:
-                group_project_name = contact_group.get('project').get('name')
-                group_name = contact_group.get('name')
+                group_project_name = contact_group.get("project").get("name")
+                group_name = contact_group.get("name")
 
                 routes.append(
                     {
-                        'receiver': f'{group_project_name}_{group_name}',
-                        'match': {'project': project_name},
+                        "receiver": f"{group_project_name}_{group_name}",
+                        "match": {"project": project_name},
                     }
                 )
 
         return routes
 
     def write(self, projects: list):
-        am_config = self.main_config.get('alertmanager_config', {})
-        am_config = merge(am_config, self.config.get('alertmanager_config', {}))
+        am_config = self.main_config.get("alertmanager_config", {})
+        am_config = merge(am_config, self.config.get("alertmanager_config", {}))
 
         am_config = merge(
             am_config,
             {
-                'route': {
-                    'routes': self._get_project_routes(projects),
+                "route": {
+                    "routes": self._get_project_routes(projects),
                 },
-                'receivers': self._get_receivers(),
+                "receivers": self._get_receivers(),
             },
         )
 
-        base_directory = pathlib.Path(self.config.get('base_directory'))
-        am_config_path = base_directory.joinpath('alertmanager.yml')
+        base_directory = pathlib.Path(self.config.get("base_directory"))
+        am_config_path = base_directory.joinpath("alertmanager.yml")
 
-        old_config = am_config_path.read_text() if am_config_path.exists() else ''
+        old_config = am_config_path.read_text() if am_config_path.exists() else ""
         new_config = yaml.safe_dump(am_config)
 
         if old_config != new_config:
-            with am_config_path.open(mode='w') as file:
-                logger.info(f'writing alert manager config file {am_config_path}')
+            with am_config_path.open(mode="w") as file:
+                logger.info(f"writing alert manager config file {am_config_path}")
                 file.write(new_config)
             self._reload_units()
         else:
-            logger.info('alert manager config is up to date')
+            logger.info("alert manager config is up to date")

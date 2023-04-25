@@ -12,4 +12,4 @@ def merge(new_vals, existing_obj):
 
 
 def camelcase_projectname(original: str) -> str:
-    return ''.join([part.title() for part in original.split('-')])
+    return "".join([part.title() for part in original.split("-")])

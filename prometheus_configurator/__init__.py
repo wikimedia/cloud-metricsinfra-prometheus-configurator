@@ -8,21 +8,21 @@ from prometheus_configurator.outputs.prometheus import PrometheusOutput
 from prometheus_configurator.outputs.thanos_rule import ThanosRuleOutput
 
 try:
-    __version__: str = get_distribution('prometheus_configurator').version
+    __version__: str = get_distribution("prometheus_configurator").version
 except DistributionNotFound:
-    __version__ = '0.0.0'
+    __version__ = "0.0.0"
 
 
 def create_output(
     output_config: dict, main_config: dict, manager_client: PrometheusManagerClient
 ) -> Output:
-    kind = output_config.get('kind')
-    if kind == 'prometheus':
+    kind = output_config.get("kind")
+    if kind == "prometheus":
         return PrometheusOutput(output_config, main_config, manager_client)
-    if kind == 'alertmanager':
+    if kind == "alertmanager":
         return AlertmanagerOutput(output_config, main_config, manager_client)
-    if kind == 'karma_acl':
+    if kind == "karma_acl":
         return KarmaAclOutput(output_config, main_config, manager_client)
-    if kind == 'thanos_rule':
+    if kind == "thanos_rule":
         return ThanosRuleOutput(output_config, main_config, manager_client)
-    raise NotImplementedError(f'Output {kind} is not supported.')
+    raise NotImplementedError(f"Output {kind} is not supported.")
