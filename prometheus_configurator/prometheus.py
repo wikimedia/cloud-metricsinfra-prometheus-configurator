@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from prometheus_configurator import PrometheusManagerClient, openstack
 from prometheus_configurator.utils import camelcase_projectname
 
@@ -150,12 +152,9 @@ class ConfigFileCreator:
                 "external_labels": self.params.get("external_labels", []),
             },
             "alerting": {
-                "alert_relabel_configs": [
-                    {
-                        "action": "labeldrop",
-                        "regex": "replica",
-                    }
-                ],
+                "alert_relabel_configs": self._create_alert_relabel_configs(
+                    projects=projects
+                ),
                 "alertmanagers": [
                     {
                         "static_configs": [
@@ -169,6 +168,36 @@ class ConfigFileCreator:
             "rule_files": rule_files_paths,
             "scrape_configs": self._create_scrape_configs(projects, manager_client),
         }
+
+    def _create_alert_relabel_configs(
+        self, projects: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
+        configs: list[dict[str, Any]] = [
+            {
+                "action": "labeldrop",
+                "regex": "replica",
+            }
+        ]
+
+        for project in projects:
+            if not project["extra_labels"]:
+                continue
+
+            for label_name, label_value in project["extra_labels"].items():
+                # Add a new label named `label_name` with value `label_value` when the project
+                # label matches the project name. For extra syntax:
+                # https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config
+                configs.append(
+                    {
+                        "action": "replace",
+                        "source_labels": ["project"],
+                        "regex": project["name"],
+                        "target_label": label_name,
+                        "replacement": label_value,
+                    }
+                )
+
+        return configs
 
     def get_project_config(self, project: str) -> dict:
         return self.params.get("projects", {}).get(project, {})
@@ -189,16 +218,18 @@ class ConfigFileCreator:
 
         for project in projects:
             project_name = project.get("name")
-            project_alert_rules = manager_client.get_project_details(
-                project.get("id")
-            ).get("alert_rules")
+            project_details = manager_client.get_project_details(project["id"])
+            project_alert_rules = project_details["alert_rules"]
 
             if len(project_alert_rules) == 0:
                 continue
 
             rule_files[
                 f"alerts_project_{project_name}.yml"
-            ] = self._create_project_rules(project_alert_rules, project_name)
+            ] = self._create_project_rules(
+                rules=project_alert_rules,
+                project_name=project_name,
+            )
 
         return rule_files
 
