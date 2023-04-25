@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 # Based on https://github.com/wikimedia/wikimedia-bots-jouncebot/blob/master/jouncebot/configloader.py
 def merge(new_vals, existing_obj):
     if isinstance(new_vals, dict) and isinstance(existing_obj, dict):

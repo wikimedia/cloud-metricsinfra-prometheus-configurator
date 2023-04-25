@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pkg_resources import DistributionNotFound, get_distribution
 
 from prometheus_configurator.manager import PrometheusManagerClient

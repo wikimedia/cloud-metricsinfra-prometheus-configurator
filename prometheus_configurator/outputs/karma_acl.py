@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 
@@ -58,7 +60,7 @@ class KarmaAclOutput(Output):
 
         rules.append({"action": "block", "reason": "not allowed"})
 
-        file_path = pathlib.Path(self.config.get("acl_file_path"))
+        file_path = pathlib.Path(self.config["acl_file_path"])
 
         old_data = file_path.read_text() if file_path.exists() else ""
         new_data = yaml.safe_dump({"rules": rules})

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from prometheus_configurator import PrometheusManagerClient, openstack
 from prometheus_configurator.utils import camelcase_projectname
 

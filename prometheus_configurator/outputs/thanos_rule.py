@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 
@@ -13,7 +15,7 @@ class ThanosRuleOutput(Output):
     def write(self, projects: list):
         creator = ConfigFileCreator(self.main_config)
 
-        file_path = pathlib.Path(self.config.get("alert_file_path"))
+        file_path = pathlib.Path(self.config["alert_file_path"])
 
         rule_data = creator.create_thanos_rule_file(self.manager)
 

@@ -2,6 +2,8 @@
 """
 Create full Prometheus config files based on sources that might be editable by end users.
 """
+from __future__ import annotations
+
 import argparse
 import glob
 import logging

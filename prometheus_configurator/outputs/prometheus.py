@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 
@@ -15,7 +17,7 @@ class PrometheusOutput(Output):
 
         changes_made = False
 
-        base_directory = pathlib.Path(self.config.get("base_directory"))
+        base_directory = pathlib.Path(self.config["base_directory"])
         base_rule_directory = base_directory.joinpath("rules")
         if not base_rule_directory.exists():
             changes_made = True

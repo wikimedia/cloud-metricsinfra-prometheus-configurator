@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import logging
 import pathlib
-from typing import List
+from typing import Any, List
 
 import yaml
 
@@ -17,15 +19,15 @@ class AlertmanagerOutput(Output):
         )
         return [
             # TODO: add support for arbitrary user-supplied webhook
-            {"url": f"{irc_base}{member.get('value').lstrip('#')}"}
+            {"url": f"{irc_base}{member['value'].lstrip('#')}"}
             for member in members
             if member.get("type") == "IRC"
         ]
 
-    def _format_contact_group(self, contact_group: dict) -> dict:
-        project_name = contact_group.get("project").get("name")
+    def _format_contact_group(self, contact_group: dict[str, Any]) -> dict[str, Any]:
+        project_name = contact_group["project"].get("name")
         name = contact_group.get("name")
-        members = contact_group.get("members")
+        members = contact_group.get("members", [])
 
         return {
             "name": f"{project_name}_{name}",
@@ -83,7 +85,7 @@ class AlertmanagerOutput(Output):
             },
         )
 
-        base_directory = pathlib.Path(self.config.get("base_directory"))
+        base_directory = pathlib.Path(self.config["base_directory"])
         am_config_path = base_directory.joinpath("alertmanager.yml")
 
         old_config = am_config_path.read_text() if am_config_path.exists() else ""
