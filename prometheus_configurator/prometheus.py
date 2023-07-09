@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from prometheus_configurator import PrometheusManagerClient, openstack
@@ -14,7 +15,7 @@ class ConfigFileCreator:
             self.params["openstack"]["credentials"]
         )
 
-    def _create_job(self, project: dict, rule: dict) -> dict:
+    def _create_job(self, project: dict, rule: dict, images: list[str]) -> dict:
         project_name = project.get("name")
         job = {
             "job_name": f"{project_name}_{rule['name']}",
@@ -36,6 +37,15 @@ class ConfigFileCreator:
             openstack_config["role"] = "instance"
 
             job["openstack_sd_configs"] = [openstack_config]
+
+            job["relabel_configs"].append(
+                {
+                    "action": "keep",
+                    "source_labels": ["__meta_openstack_instance_image"],
+                    "regex": "|".join([re.escape(image) for image in images]),
+                }
+            )
+
             if "name_regex" in rule["openstack_discovery"]:
                 job["relabel_configs"].append(
                     {
@@ -88,14 +98,18 @@ class ConfigFileCreator:
         self, projects: list, manager_client: PrometheusManagerClient
     ) -> list:
         result = []
+        images = [
+            image["openstack_id"]
+            for image in manager_client.get_supported_openstack_images()
+        ]
 
         for project in projects:
             for job in self.params.get("global_jobs", []):
-                result.append(self._create_job(project, job))
+                result.append(self._create_job(project, job, images))
             for job in manager_client.get_project_details(project.get("id")).get(
                 "scrapes"
             ):
-                result.append(self._create_job(project, job))
+                result.append(self._create_job(project, job, images))
 
         return result
 

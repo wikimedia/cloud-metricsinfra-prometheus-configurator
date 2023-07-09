@@ -32,3 +32,6 @@ class PrometheusManagerClient:
 
     def get_contact_groups(self):
         return self.get("/v1/contact-groups")
+
+    def get_supported_openstack_images(self):
+        return self.get("/v1/supported-openstack-images")
