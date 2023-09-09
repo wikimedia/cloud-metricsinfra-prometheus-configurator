@@ -75,9 +75,14 @@ class ConfigFileCreator:
             job["scheme"] = "http"
             job["params"]["module"] = [f"{project_name}_{rule['name']}"]
 
-            job["relabel_configs"].append(
-                {"source_labels": ["__address__"], "target_label": "__param_target"},
-            )
+            if "openstack_discovery" not in rule or not rule["openstack_discovery"]:
+                job["relabel_configs"].append(
+                    {
+                        "source_labels": ["__address__"],
+                        "target_label": "__param_target",
+                    },
+                )
+
             job["relabel_configs"].append(
                 {
                     "target_label": "__address__",
@@ -138,6 +143,15 @@ class ConfigFileCreator:
                     "regex": "ACTIVE",
                 }
             )
+
+            if blackbox:
+                job["relabel_configs"].append(
+                    {
+                        "source_labels": ["__meta_openstack_private_ip"],
+                        "target_label": "__param_target",
+                        "replacement": f"{rule['scheme']}://$1:${rule['openstack_discovery']['port']}/${rule['path']}",
+                    }
+                )
 
         static_targets = [
             f"{target['host']}:{target['port']}"
