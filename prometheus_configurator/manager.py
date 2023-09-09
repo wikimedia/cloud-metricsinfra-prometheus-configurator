@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import logging
 
 import requests
@@ -27,6 +28,7 @@ class PrometheusManagerClient:
         # TODO: shard projects across multiple prometheus instances? see T286301
         return self.get("/v1/projects")
 
+    @functools.lru_cache(maxsize=1024)
     def get_project_details(self, project_id: int):
         return self.get(f"/v1/projects/{project_id}")
 

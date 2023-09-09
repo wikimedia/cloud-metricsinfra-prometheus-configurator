@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Optional
 
 from prometheus_configurator import PrometheusManagerClient, openstack
 from prometheus_configurator.utils import camelcase_projectname
@@ -15,20 +15,85 @@ class ConfigFileCreator:
             self.params["openstack"]["credentials"]
         )
 
-    def _create_job(self, project: dict, rule: dict, images: list[str]) -> dict:
-        project_name = project.get("name")
+    def _format_blackbox_module(self, config: dict) -> dict:
+        module = {
+            "prober": config["type"],
+        }
+
+        if module["prober"] == "http":
+            module["http"] = {
+                "method": config["method"],
+                "no_follow_redirects": not config["follow_redirects"],
+            }
+
+            if config["headers"]:
+                module["http"]["headers"] = config["headers"]
+
+            if config["valid_status_codes"]:
+                module["http"]["valid_status_codes"] = config["valid_status_codes"]
+
+            if config["require_body_match"]:
+                module["http"]["fail_if_body_not_matches_regexp"] = config[
+                    "require_body_match"
+                ]
+
+            if config["require_body_not_match"]:
+                module["http"]["fail_if_body_matches_regexp"] = config[
+                    "require_body_not_match"
+                ]
+
+        return module
+
+    def _create_job(
+        self,
+        project: dict,
+        rule: dict,
+        images: list[str],
+        blackbox_address: Optional[str],
+    ) -> tuple[Optional[dict], Optional[dict]]:
+        project_name = project["name"]
         job = {
             "job_name": f"{project_name}_{rule['name']}",
             "relabel_configs": [],
             "metrics_path": rule.get("path", "/metrics"),
             "scheme": rule.get("scheme", "http"),
-            "static_configs": [],
+            "params": {},
         }
 
         # TODO: this is currently used for global rules only,
         # and may change when they are loaded from the manager
         if "metrics_path" in rule:
             job["metrics_path"] = rule["metrics_path"]
+
+        blackbox = None
+
+        if "blackbox" in rule and rule["blackbox"]:
+            if not blackbox_address:
+                return None, None
+
+            job["metrics_path"] = "/probe"
+            job["scheme"] = "http"
+            job["params"]["module"] = [f"{project_name}_{rule['name']}"]
+
+            job["relabel_configs"].append(
+                {"source_labels": ["__address__"], "target_label": "__param_target"},
+            )
+            job["relabel_configs"].append(
+                {
+                    "target_label": "__address__",
+                    "replacement": blackbox_address,
+                }
+            )
+
+            if rule["blackbox"]["type"] == "http" and rule["blackbox"]["host"]:
+                job["relabel_configs"].append(
+                    {
+                        "target_label": "__param_hostname",
+                        "replacement": rule["blackbox"]["host"],
+                    }
+                )
+
+            blackbox = self._format_blackbox_module(rule["blackbox"])
 
         if "openstack_discovery" in rule and rule["openstack_discovery"] is not None:
             openstack_config = dict(self.openstack_credentials)
@@ -82,36 +147,71 @@ class ConfigFileCreator:
                 }
             )
 
-        for static_target in rule.get("static_discovery", []):
+        static_targets = [
+            f"{target['host']}:{target['port']}"
+            for target in rule.get("static_discovery", [])
+        ]
+        if static_targets:
+            if blackbox:
+                static_targets = [
+                    f"{rule['scheme']}://{target}{rule['path']}"
+                    for target in static_targets
+                ]
+
             obj = {
-                "targets": [f"{static_target['host']}:{static_target['port']}"],
+                "targets": static_targets,
                 "labels": {
                     "project": project_name,
                 },
             }
 
-            job["static_configs"].append(obj)
+            job["static_configs"] = [obj]
 
-        return job
+        return job, blackbox
 
     def _create_scrape_configs(
-        self, projects: list, manager_client: PrometheusManagerClient
-    ) -> list:
-        result = []
+        self,
+        projects: list,
+        manager_client: PrometheusManagerClient,
+        blackbox_address: Optional[str],
+    ) -> tuple[list, dict[str, Any]]:
+        scrape_configs: list[dict] = []
+        blackbox_modules = {}
         images = [
             image["openstack_id"]
             for image in manager_client.get_supported_openstack_images()
         ]
 
         for project in projects:
-            for job in self.params.get("global_jobs", []):
-                result.append(self._create_job(project, job, images))
-            for job in manager_client.get_project_details(project.get("id")).get(
-                "scrapes"
-            ):
-                result.append(self._create_job(project, job, images))
+            project_name = project["name"]
+            project_details = manager_client.get_project_details(project["id"])
+            project_blackbox_modules = {}
 
-        return result
+            for job in self.params.get("global_jobs", []):
+                job_scrape, _ = self._create_job(project, job, images, blackbox_address)
+                if job_scrape:
+                    scrape_configs.append(job_scrape)
+
+            for job in project_details.get("scrapes"):
+                job_scrape, job_blackbox = self._create_job(
+                    project, job, images, blackbox_address
+                )
+
+                if not job_scrape:
+                    continue
+
+                scrape_configs.append(job_scrape)
+                if job_blackbox:
+                    project_blackbox_modules[
+                        f"{project_name}_{job['name']}"
+                    ] = job_blackbox
+
+            if project_blackbox_modules:
+                blackbox_modules[
+                    f"project_{project_name}.yml"
+                ] = project_blackbox_modules
+
+        return scrape_configs, blackbox_modules
 
     def _create_rule(self, rule: dict, name_prefix: str, extra_labels: dict) -> dict:
         return {
@@ -159,8 +259,15 @@ class ConfigFileCreator:
         projects: list,
         manager_client: PrometheusManagerClient,
         rule_files_paths: list,
-    ) -> dict:
-        return {
+        blackbox_address: Optional[str],
+    ) -> tuple[dict, dict[str, Any]]:
+        scrape_configs, blackbox_modules = self._create_scrape_configs(
+            projects,
+            manager_client,
+            blackbox_address,
+        )
+
+        prometheus_config = {
             "global": {
                 "scrape_interval": "60s",
                 "external_labels": self.params.get("external_labels", []),
@@ -180,8 +287,10 @@ class ConfigFileCreator:
                 ],
             },
             "rule_files": rule_files_paths,
-            "scrape_configs": self._create_scrape_configs(projects, manager_client),
+            "scrape_configs": scrape_configs,
         }
+
+        return prometheus_config, blackbox_modules
 
     def _create_alert_relabel_configs(
         self, projects: list[dict[str, Any]]
