@@ -85,14 +85,6 @@ class ConfigFileCreator:
                 }
             )
 
-            if rule["blackbox"]["type"] == "http" and rule["blackbox"]["host"]:
-                job["relabel_configs"].append(
-                    {
-                        "target_label": "__param_hostname",
-                        "replacement": rule["blackbox"]["host"],
-                    }
-                )
-
             blackbox = self._format_blackbox_module(rule["blackbox"])
 
         if "openstack_discovery" in rule and rule["openstack_discovery"] is not None:
