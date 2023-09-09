@@ -18,13 +18,13 @@ class ConfigFileCreator:
     def _format_blackbox_module(self, config: dict) -> dict:
         module = {
             "prober": config["type"],
-            "tls_config": {},
         }
 
         if module["prober"] == "http":
             module["http"] = {
                 "method": config["method"],
                 "no_follow_redirects": not config["follow_redirects"],
+                "tls_config": {},
                 "headers": {},
             }
 
@@ -33,7 +33,7 @@ class ConfigFileCreator:
 
             if config["host"]:
                 module["http"]["headers"]["Host"] = config["host"]
-                module["tls_config"]["server_name"] = config["host"]
+                module["http"]["tls_config"]["server_name"] = config["host"]
 
             if config["valid_status_codes"]:
                 module["http"]["valid_status_codes"] = config["valid_status_codes"]
