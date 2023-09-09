@@ -176,7 +176,7 @@ class ConfigFileCreator:
         blackbox_address: Optional[str],
     ) -> tuple[list, dict[str, Any]]:
         scrape_configs: list[dict] = []
-        blackbox_modules = {}
+        blackbox_configs = {}
         images = [
             image["openstack_id"]
             for image in manager_client.get_supported_openstack_images()
@@ -207,11 +207,11 @@ class ConfigFileCreator:
                     ] = job_blackbox
 
             if project_blackbox_modules:
-                blackbox_modules[
-                    f"project_{project_name}.yml"
-                ] = project_blackbox_modules
+                blackbox_configs[f"project_{project_name}.yml"] = {
+                    "modules": project_blackbox_modules
+                }
 
-        return scrape_configs, blackbox_modules
+        return scrape_configs, blackbox_configs
 
     def _create_rule(self, rule: dict, name_prefix: str, extra_labels: dict) -> dict:
         return {
