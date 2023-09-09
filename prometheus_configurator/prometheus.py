@@ -155,7 +155,7 @@ class ConfigFileCreator:
                     {
                         "source_labels": ["__meta_openstack_private_ip"],
                         "target_label": "__param_target",
-                        "replacement": f"{rule['scheme']}://$1:${rule['openstack_discovery']['port']}{rule['path']}",
+                        "replacement": f"{rule['scheme']}://$1:{rule['openstack_discovery']['port']}{rule['path']}",
                     }
                 )
 
