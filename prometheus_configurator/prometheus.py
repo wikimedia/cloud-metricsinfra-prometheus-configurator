@@ -147,13 +147,6 @@ class ConfigFileCreator:
             )
             job["relabel_configs"].append(
                 {
-                    "source_labels": ["job"],
-                    "target_label": "job",
-                    "replacement": rule["name"],
-                }
-            )
-            job["relabel_configs"].append(
-                {
                     "source_labels": ["__meta_openstack_instance_name"],
                     "target_label": "instance",
                 }
@@ -194,6 +187,14 @@ class ConfigFileCreator:
             }
 
             job["static_configs"] = [obj]
+
+        job["relabel_configs"].append(
+            {
+                "source_labels": ["job"],
+                "target_label": "job",
+                "replacement": rule["name"],
+            }
+        )
 
         return job, blackbox
 
