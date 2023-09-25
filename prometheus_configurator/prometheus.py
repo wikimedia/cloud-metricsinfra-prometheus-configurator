@@ -173,11 +173,19 @@ class ConfigFileCreator:
             for target in rule.get("static_discovery", [])
         ]
         if static_targets:
-            if blackbox and blackbox["prober"] == "http":
-                static_targets = [
-                    f"{rule['scheme']}://{target}{rule['path']}"
-                    for target in static_targets
-                ]
+            if blackbox:
+                job["relabel_configs"].append(
+                    {
+                        "source_labels": ["__param_target"],
+                        "target_label": "instance",
+                    }
+                )
+
+                if blackbox["prober"] == "http":
+                    static_targets = [
+                        f"{rule['scheme']}://{target}{rule['path']}"
+                        for target in static_targets
+                    ]
 
             obj = {
                 "targets": static_targets,
