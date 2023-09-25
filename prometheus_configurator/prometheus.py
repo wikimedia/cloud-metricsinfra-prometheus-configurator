@@ -15,12 +15,28 @@ class ConfigFileCreator:
             self.params["openstack"]["credentials"]
         )
 
-    def _format_blackbox_module(self, config: dict) -> dict:
+    def _format_blackbox_module(self, config: dict, job: dict) -> dict:
         module = {
             "prober": config["type"],
         }
 
-        if module["prober"] == "http":
+        if module["prober"] == "dns":
+            module["dns"] = {
+                "query_name": config["query_name"],
+                "query_type": config["query_type"],
+                "query_class": "IN",
+                "transport_protocol": job.get("scheme", "udp"),
+                "valid_rcodes": ["NOERROR"],
+                "validate_answer_rrs": {},
+                "validate_authority_rrs": {},
+                "validate_additional_rrs": {},
+            }
+
+            if config["require_answer_match"]:
+                module["dns"]["validate_answer_rrs"][
+                    "fail_if_not_matches_regexp"
+                ] = config["require_answer_match"]
+        elif module["prober"] == "http":
             module["http"] = {
                 "method": config["method"],
                 "no_follow_redirects": not config["follow_redirects"],
@@ -96,7 +112,7 @@ class ConfigFileCreator:
                 }
             )
 
-            blackbox = self._format_blackbox_module(rule["blackbox"])
+            blackbox = self._format_blackbox_module(rule["blackbox"], rule)
 
         if "openstack_discovery" in rule and rule["openstack_discovery"] is not None:
             openstack_config = dict(self.openstack_credentials)
@@ -150,7 +166,7 @@ class ConfigFileCreator:
                 }
             )
 
-            if blackbox:
+            if blackbox and blackbox["prober"] == "http":
                 job["relabel_configs"].append(
                     {
                         "source_labels": ["__meta_openstack_private_ip"],
@@ -164,7 +180,7 @@ class ConfigFileCreator:
             for target in rule.get("static_discovery", [])
         ]
         if static_targets:
-            if blackbox:
+            if blackbox and blackbox["prober"] == "http":
                 static_targets = [
                     f"{rule['scheme']}://{target}{rule['path']}"
                     for target in static_targets
