@@ -35,6 +35,7 @@ class AlertmanagerOutput(Output):
                 {
                     "to": member.get("value"),
                     "send_resolved": True,
+                    "headers": {"Auto-Submitted": "auto-generated"},
                 }
                 for member in members
                 if member.get("type") == "EMAIL"
