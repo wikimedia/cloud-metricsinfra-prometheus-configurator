@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2021-2024 Taavi Väänänen <hi@taavi.wtf>
+# SPDX-License-Identifier: AGPL-3.0-only
 """
 Create full Prometheus config files based on sources that might be editable by end users.
 """
