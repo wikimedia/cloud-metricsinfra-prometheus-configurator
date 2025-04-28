@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2021-2024 Taavi Väänänen <hi@taavi.wtf>
+# SPDX-FileCopyrightText: 2021-2025 Taavi Väänänen <hi@taavi.wtf>
 # SPDX-License-Identifier: AGPL-3.0-only
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from prometheus_configurator.utils import camelcase_projectname
 
 
 class ConfigFileCreator:
-    def __init__(self, params: dict):
+    def __init__(self, params: dict[str, Any]) -> None:
         self.params = params
 
         self.openstack_credentials = openstack.read_openstack_configuration(
@@ -74,7 +74,7 @@ class ConfigFileCreator:
         project: dict,
         rule: dict,
         images: list[str],
-        blackbox_address: Optional[str],
+        output_config: dict[str, Any],
     ) -> tuple[Optional[dict], Optional[dict]]:
         project_name = project["name"]
         job = {
@@ -93,6 +93,7 @@ class ConfigFileCreator:
         blackbox = None
 
         if "blackbox" in rule and rule["blackbox"]:
+            blackbox_address = output_config.get("blackbox_address")
             if not blackbox_address:
                 return None, None
 
@@ -162,12 +163,24 @@ class ConfigFileCreator:
                 }
             )
 
+            instance_fqdn_template = output_config["fqdn_template"].format(
+                instance="$1",  # Will be replaced by Prometheus
+                project=project_name,
+            )
             if blackbox and blackbox["prober"] == "http":
                 job["relabel_configs"].append(
                     {
-                        "source_labels": ["__meta_openstack_private_ip"],
+                        "source_labels": ["__meta_openstack_instance_name"],
                         "target_label": "__param_target",
-                        "replacement": f"{rule['scheme']}://$1:{rule['openstack_discovery']['port']}{rule['path']}",
+                        "replacement": f"{rule['scheme']}://{instance_fqdn_template}:{rule['openstack_discovery']['port']}{rule['path']}",
+                    }
+                )
+            else:
+                job["relabel_configs"].append(
+                    {
+                        "source_labels": ["__meta_openstack_instance_name"],
+                        "target_label": "__address__",
+                        "replacement": f"{instance_fqdn_template}:{rule['openstack_discovery']['port']}",
                     }
                 )
 
@@ -213,7 +226,7 @@ class ConfigFileCreator:
         self,
         projects: list,
         manager_client: PrometheusManagerClient,
-        blackbox_address: Optional[str],
+        output_config: dict[str, Any],
     ) -> tuple[list, dict[str, Any]]:
         scrape_configs: list[dict] = []
         blackbox_configs = {}
@@ -228,13 +241,13 @@ class ConfigFileCreator:
             project_blackbox_modules = {}
 
             for job in self.params.get("global_jobs", []):
-                job_scrape, _ = self._create_job(project, job, images, blackbox_address)
+                job_scrape, _ = self._create_job(project, job, images, output_config)
                 if job_scrape:
                     scrape_configs.append(job_scrape)
 
             for job in project_details.get("scrapes"):
                 job_scrape, job_blackbox = self._create_job(
-                    project, job, images, blackbox_address
+                    project, job, images, output_config
                 )
 
                 if not job_scrape:
@@ -299,12 +312,12 @@ class ConfigFileCreator:
         projects: list,
         manager_client: PrometheusManagerClient,
         rule_files_paths: list,
-        blackbox_address: Optional[str],
+        output_config: dict[str, Any],
     ) -> tuple[dict, dict[str, Any]]:
         scrape_configs, blackbox_modules = self._create_scrape_configs(
             projects,
             manager_client,
-            blackbox_address,
+            output_config,
         )
 
         prometheus_config = {

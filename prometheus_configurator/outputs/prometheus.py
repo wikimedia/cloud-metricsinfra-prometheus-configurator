@@ -62,7 +62,7 @@ class PrometheusOutput(Output):
             projects,
             self.manager,
             [f"{base_rule_directory}/*.yml"],
-            blackbox_address,
+            self.config,
         )
 
         prometheus_config_path = base_directory / "prometheus.yml"
