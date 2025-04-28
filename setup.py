@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2021-2024 Taavi Väänänen <hi@taavi.wtf>
 # SPDX-License-Identifier: AGPL-3.0-only
 
-from setuptools import setup
+from setuptools import setup  # type: ignore
 
 setup(
     name="prometheus-configurator",

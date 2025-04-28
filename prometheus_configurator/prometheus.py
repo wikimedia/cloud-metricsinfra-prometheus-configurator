@@ -36,9 +36,9 @@ class ConfigFileCreator:
             }
 
             if config["require_answer_match"]:
-                module["dns"]["validate_answer_rrs"][
-                    "fail_if_not_matches_regexp"
-                ] = config["require_answer_match"]
+                module["dns"]["validate_answer_rrs"]["fail_if_not_matches_regexp"] = (
+                    config["require_answer_match"]
+                )
         elif module["prober"] == "http":
             module["http"] = {
                 "method": config["method"],
@@ -242,9 +242,9 @@ class ConfigFileCreator:
 
                 scrape_configs.append(job_scrape)
                 if job_blackbox:
-                    project_blackbox_modules[
-                        f"{project_name}_{job['name']}"
-                    ] = job_blackbox
+                    project_blackbox_modules[f"{project_name}_{job['name']}"] = (
+                        job_blackbox
+                    )
 
             if project_blackbox_modules:
                 blackbox_configs[f"project_{project_name}.yml"] = {
@@ -387,11 +387,11 @@ class ConfigFileCreator:
             if len(project_alert_rules) == 0:
                 continue
 
-            rule_files[
-                f"alerts_project_{project_name}.yml"
-            ] = self._create_project_rules(
-                rules=project_alert_rules,
-                project_name=project_name,
+            rule_files[f"alerts_project_{project_name}.yml"] = (
+                self._create_project_rules(
+                    rules=project_alert_rules,
+                    project_name=project_name,
+                )
             )
 
         return rule_files

@@ -4,3 +4,6 @@
 [build-system]
 requires = ["setuptools>=24.2.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.isort]
+profile = "black"

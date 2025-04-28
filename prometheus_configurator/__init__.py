@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from pkg_resources import DistributionNotFound, get_distribution
+from pkg_resources import DistributionNotFound, get_distribution  # type: ignore
 
 from prometheus_configurator.manager import PrometheusManagerClient
 from prometheus_configurator.outputs import Output
