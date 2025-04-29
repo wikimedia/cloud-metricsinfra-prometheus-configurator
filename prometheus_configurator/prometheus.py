@@ -33,6 +33,7 @@ class ConfigFileCreator:
                 "validate_answer_rrs": {},
                 "validate_authority_rrs": {},
                 "validate_additional_rrs": {},
+                "preferred_ip_protocol": "ip4",  # TODO: remove
             }
 
             if config["require_answer_match"]:
@@ -45,6 +46,7 @@ class ConfigFileCreator:
                 "no_follow_redirects": not config["follow_redirects"],
                 "tls_config": {},
                 "headers": {},
+                "preferred_ip_protocol": "ip4",  # TODO: remove
             }
 
             if config["headers"]:
