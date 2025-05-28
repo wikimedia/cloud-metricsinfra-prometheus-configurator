@@ -17,15 +17,23 @@ logger = logging.getLogger(__name__)
 
 class AlertmanagerOutput(Output):
     def _format_webhook_configs(self, members: List[dict]) -> List[dict]:
-        irc_base = self.main_config.get("alert_routing", {}).get(
-            "irc_base", "http://invalid/"
-        )
-        return [
+        alert_routing_config = self.main_config.get("alert_routing", {})
+        irc_base = alert_routing_config.get("irc_base", "http://invalid/")
+        phab_base = alert_routing_config.get("phab_base", "http://invalid/")
+        urls = []
+
+        for member in members:
+            member_type = member.get("type")
+            if member_type == "IRC":
+                urls.append(f"{irc_base}{member['value'].lstrip('#')}")
+            elif member_type == "PHAB":
+                phids = "&".join(f"phid={phid}" for phid in member["value"].split(","))
+                urls.append(
+                    f"{phab_base}/alerts?{phids}&title=%7B%7BcommonAnnotations.summary%7D%7D"
+                )
             # TODO: add support for arbitrary user-supplied webhook
-            {"url": f"{irc_base}{member['value'].lstrip('#')}"}
-            for member in members
-            if member.get("type") == "IRC"
-        ]
+
+        return [{"url": url} for url in urls]
 
     def _format_contact_group(self, contact_group: dict[str, Any]) -> dict[str, Any]:
         project_name = contact_group["project"].get("name")
