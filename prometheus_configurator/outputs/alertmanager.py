@@ -25,11 +25,13 @@ class AlertmanagerOutput(Output):
         for member in members:
             member_type = member.get("type")
             if member_type == "IRC":
-                urls.append(f"{irc_base}{member['value'].lstrip('#')}")
+                urls.append(
+                    f"{irc_base.removesuffix('/')}/{member['value'].lstrip('#')}"
+                )
             elif member_type == "PHAB":
                 phids = "&".join(f"phid={phid}" for phid in member["value"].split(","))
                 urls.append(
-                    f"{phab_base}/alerts?{phids}&title=%7B%7BcommonAnnotations.summary%7D%7D"
+                    f"{phab_base.removesuffix('/')}/alerts?{phids}&title=%7B%7BcommonAnnotations.summary%7D%7D"
                 )
             # TODO: add support for arbitrary user-supplied webhook
 
